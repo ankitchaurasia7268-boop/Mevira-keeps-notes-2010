@@ -46,6 +46,15 @@ jobs:
           pip install --upgrade pip setuptools wheel
           pip install buildozer cython
 
+            - name: Accept Android SDK licenses
+        run: |
+          SDKMANAGER=$(find "$HOME/.buildozer" -name sdkmanager -type f | head -n 1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses || true
+
       - name: Build APK
         run: |
           . .venv/bin/activate
