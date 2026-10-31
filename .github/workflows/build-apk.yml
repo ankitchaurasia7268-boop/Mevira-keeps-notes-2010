@@ -21,13 +21,16 @@ jobs:
     - name: Install Dependencies & Buildozer
       run: |
         sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+        sudo apt-get install -y git zip unzip openjdk-11-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
         pip3 install --upgrade pip
         pip3 install buildozer cython==0.29.36
 
-    - name: Build APK with Buildozer
+    - name: Accept Licenses and Build APK
       run: |
-        buildozer -v android debug
+        mkdir -p ~/.android
+        touch ~/.android/repositories.cfg
+        # Buildozer कमांड चलाने से पहले SDK लाइसेंस स्वीकार करने के लिए
+        yes | buildozer -v android debug || buildozer -v android debug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
