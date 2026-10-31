@@ -9,6 +9,9 @@ package.name = mevirakeep
 # (str) Package domain (needed for android packaging)
 package.domain = org.mevira
 
+# (str) Version of your application
+version = 1.0
+
 # (str) Source files where the let (let = relative to .spec path)
 source.dir = .
 
@@ -39,3 +42,4 @@ log_level = 2
 
 # (int) Display warning if buildozer is run as root (0 = False, 1 = True)
 warn_on_root = 1
+
