@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Install system dependencies
         run: |
@@ -39,22 +39,25 @@ jobs:
             libffi-dev \
             libssl-dev
 
-      - name: Install Android SDK tools
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" \
+          sdkmanager --install \
+            "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
-          yes | sdkmanager --licenses || true
+          yes | sdkmanager --licenses
 
       - name: Install Buildozer
         run: |
           python3 -m venv .venv
           . .venv/bin/activate
           pip install --upgrade pip setuptools wheel
-          pip install buildozer cython
+          pip install buildozer cython==0.29.36
 
-      - name: Build APK
+      - name: Build Mevira Keep APK
         run: |
           . .venv/bin/activate
           buildozer android debug
