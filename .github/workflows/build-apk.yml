@@ -39,6 +39,14 @@ jobs:
             libffi-dev \
             libssl-dev
 
+      - name: Install Android SDK tools
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+          yes | sdkmanager --licenses || true
+
       - name: Install Buildozer
         run: |
           python3 -m venv .venv
@@ -47,11 +55,9 @@ jobs:
           pip install buildozer cython
 
       - name: Build APK
-        env:
-          BUILDOZER_WARN_ON_ROOT: "0"
         run: |
           . .venv/bin/activate
-          yes | buildozer android debug
+          buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
