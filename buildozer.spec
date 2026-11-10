@@ -1,35 +1,28 @@
 [app]
 
-# (str) Title of your application
 title = Mevira Keep
+package.name = mevira_keep
+package.domain = com.mevira
 
-# (str) Package name
-package.name = mevirakeep
+source.dir = .
+source.include_exts = py,png,jpg,jpeg,kv,atlas,ttf,json
 
-# (str) Package domain (needed for android packaging)
-package.domain = org.mevira
-
-# (str) Version of your application
 version = 1.0
 
-# (str) Source files where the let (let = relative to .spec path)
-source.dir = .
-
-# (List) Source files to include (let types)
-source.include_exts = py,png,jpg,kv,atlas,json
-
-# (list) Application requirements
 requirements = python3,kivy
 
-# (str) Supported orientations
 orientation = portrait
-
-# (list) Permissions
-android.permissions = INTERNET
-
-# (str) Specific archs to build for (fast build & prevents timeout)
-android.archs = arm64-v8a
+fullscreen = 0
 
 [buildozer]
+
 log_level = 2
 warn_on_root = 1
+
+android.permissions =
+android.api = 35
+android.minapi = 23
+android.ndk = 25b
+android.archs = arm64-v8a
+android.accept_sdk_license = True
+
