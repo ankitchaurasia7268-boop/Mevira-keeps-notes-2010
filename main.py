@@ -18,9 +18,8 @@ from kivy.uix.popup import Popup
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.widget import Widget
 
-
 APP_NAME = "Mevira Keep"
-DATA_FILE = Path.home() / "mevira_keep_notes.json"
+DATA_FILE = None
 
 Window.clearcolor = (0.94, 0.95, 0.97, 1)
 
@@ -36,13 +35,12 @@ NOTE_COLORS = [
 ]
 
 QUOTES = [
-    "“The secret of getting ahead is getting started.” – Mark Twain",
-    "“It always seems impossible until it’s done.” – Nelson Mandela",
-    "“Don’t watch the clock; do what it does. Keep going.” – Sam Levenson",
-    "“Success is not final; failure is not fatal: It is the courage to continue that counts.”",
-    "“Focus on being productive instead of busy.” – Tim Ferriss"
+    "The secret of getting ahead is getting started. - Mark Twain",
+    "It always seems impossible until it's done. - Nelson Mandela",
+    "Don't watch the clock; do what it does. Keep going. - Sam Levenson",
+    "Success is not final; failure is not fatal: It is the courage to continue that counts.",
+    "Focus on being productive instead of busy. - Tim Ferriss"
 ]
-
 
 class DrawingWidget(Widget):
     def __init__(self, existing_lines=None, **kwargs):
@@ -75,7 +73,6 @@ class DrawingWidget(Widget):
         self.lines.clear()
         self.canvas.clear()
 
-
 class NoteCard(BoxLayout):
     def __init__(self, note, app, **kwargs):
         super().__init__(
@@ -105,9 +102,7 @@ class NoteCard(BoxLayout):
 
         with self.canvas.before:
             Color(*bg_rgba)
-            self.bg = RoundedRectangle(
-                pos=self.pos, size=self.size, radius=[dp(16)]
-            )
+            self.bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(16)])
         self.bind(pos=self.update_bg, size=self.update_bg)
 
         f_size = "18sp" if app.font_size_pref == "Large" else "16sp"
@@ -157,7 +152,7 @@ class NoteCard(BoxLayout):
             words_count = len(text_content.split())
             chars_count = len(text_content)
             content = Label(text=text_content + f"\n\n[Words: {words_count} | Chars: {chars_count}]", color=content_color, font_size=c_size, halign="left", valign="top")
-        
+
         content.bind(size=lambda obj, size: setattr(obj, "text_size", (size[0], None)))
         self.add_widget(content)
 
@@ -198,26 +193,18 @@ class NoteCard(BoxLayout):
 
             color_btn = Button(text="Color", font_size="11sp")
             color_btn.bind(on_release=lambda *_: app.open_color_picker(note))
-
             export_btn = Button(text="Export", font_size="11sp")
             export_btn.bind(on_release=lambda *_: app.export_note(note))
-
             arch_text = "Unarch" if note.get("archived", False) else "Arch"
             arch_btn = Button(text=arch_text, font_size="11sp")
             arch_btn.bind(on_release=lambda *_: app.toggle_archive(note))
-
             pin_btn = Button(text="📌" if note.get("pinned") else "Pin", font_size="11sp")
             pin_btn.bind(on_release=lambda *_: app.toggle_pin(note))
-
             delete_btn = Button(text="Trash", font_size="11sp")
             delete_btn.bind(on_release=lambda *_: app.delete_note(note))
 
-            actions.add_widget(edit_btn)
-            actions.add_widget(color_btn)
-            actions.add_widget(export_btn)
-            actions.add_widget(arch_btn)
-            actions.add_widget(pin_btn)
-            actions.add_widget(delete_btn)
+            for btn in (edit_btn, color_btn, export_btn, arch_btn, pin_btn, delete_btn):
+                actions.add_widget(btn)
 
         self.add_widget(actions)
 
@@ -225,9 +212,14 @@ class NoteCard(BoxLayout):
         self.bg.pos = self.pos
         self.bg.size = self.size
 
-
 class MeviraKeep(App):
     def build(self):
+        global DATA_FILE
+        try:
+            DATA_FILE = Path(self.user_data_dir) / "mevira_keep_notes.json"
+        except Exception:
+            DATA_FILE = Path.home() / "mevira_keep_notes.json"
+
         self.title = APP_NAME
         self.notes = []
         self.search_query = ""
@@ -244,7 +236,6 @@ class MeviraKeep(App):
     def show_splash_screen(self):
         self.root_layout.clear_widgets()
         splash_box = BoxLayout(orientation="vertical", padding=dp(20), spacing=dp(10))
-        
         with splash_box.canvas.before:
             Color(0.94, 0.95, 0.97, 1)
             self.splash_bg = Rectangle(pos=splash_box.pos, size=Window.size)
@@ -259,7 +250,6 @@ class MeviraKeep(App):
         splash_box.add_widget(title_label)
         splash_box.add_widget(sub_label)
         splash_box.add_widget(Widget())
-
         self.root_layout.add_widget(splash_box)
         Clock.schedule_once(self.load_main_interface, 2.0)
 
@@ -269,23 +259,19 @@ class MeviraKeep(App):
 
     def load_main_interface(self, dt):
         self.root_layout.clear_widgets()
-        
         root = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(10))
         header = BoxLayout(size_hint_y=None, height=dp(55), spacing=dp(8))
 
         menu_btn = Button(text="☰", size_hint_x=None, width=dp(48), font_size="20sp")
         menu_btn.bind(on_release=self.open_menu)
-
         self.search = TextInput(
             hint_text="Search your notes...", multiline=False, size_hint_y=None, height=dp(46),
             background_normal="", background_active="", background_color=(1, 1, 1, 1),
             foreground_color=(0.1, 0.1, 0.1, 1), padding=[dp(14), dp(12)]
         )
         self.search.bind(text=self.search_notes)
-
         self.theme_btn = Button(text="🌙", size_hint_x=None, width=dp(48), font_size="18sp")
         self.theme_btn.bind(on_release=lambda *_: self.toggle_dark_mode())
-
         header.add_widget(menu_btn)
         header.add_widget(self.search)
         header.add_widget(self.theme_btn)
@@ -319,8 +305,9 @@ class MeviraKeep(App):
         self.apply_theme()
 
     def load_notes(self):
+        global DATA_FILE
         try:
-            if DATA_FILE.exists():
+            if DATA_FILE and DATA_FILE.exists():
                 with open(DATA_FILE, "r", encoding="utf-8") as f:
                     loaded = json.load(f)
                 if isinstance(loaded, dict):
@@ -333,7 +320,10 @@ class MeviraKeep(App):
             self.notes = []
 
     def save_notes(self):
+        global DATA_FILE
         try:
+            if not DATA_FILE:
+                return
             data = {
                 "notes": self.notes,
                 "dark_mode": self.dark_mode,
@@ -341,32 +331,34 @@ class MeviraKeep(App):
             }
             with open(DATA_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            self.status.text = "Notes saved"
+            if hasattr(self, "status"):
+                self.status.text = "Notes saved"
         except Exception as error:
-            self.status.text = "Save error: " + str(error)
+            if hasattr(self, "status"):
+                self.status.text = "Save error: " + str(error)
 
     def apply_theme(self):
         if self.dark_mode:
             Window.clearcolor = (0.10, 0.11, 0.13, 1)
-            if hasattr(self, 'heading'):
+            if hasattr(self, "heading"):
                 self.heading.color = (0.92, 0.94, 0.98, 1)
-            if hasattr(self, 'status'):
+            if hasattr(self, "status"):
                 self.status.color = (0.70, 0.72, 0.78, 1)
-            if hasattr(self, 'search'):
+            if hasattr(self, "search"):
                 self.search.background_color = (0.20, 0.22, 0.26, 1)
                 self.search.foreground_color = (0.95, 0.95, 0.97, 1)
-            if hasattr(self, 'theme_btn'):
+            if hasattr(self, "theme_btn"):
                 self.theme_btn.text = "☀️"
         else:
             Window.clearcolor = (0.94, 0.95, 0.97, 1)
-            if hasattr(self, 'heading'):
+            if hasattr(self, "heading"):
                 self.heading.color = (0.12, 0.13, 0.16, 1)
-            if hasattr(self, 'status'):
+            if hasattr(self, "status"):
                 self.status.color = (0.25, 0.26, 0.30, 1)
-            if hasattr(self, 'search'):
+            if hasattr(self, "search"):
                 self.search.background_color = (1, 1, 1, 1)
                 self.search.foreground_color = (0.1, 0.1, 0.1, 1)
-            if hasattr(self, 'theme_btn'):
+            if hasattr(self, "theme_btn"):
                 self.theme_btn.text = "🌙"
         self.refresh_notes()
 
@@ -386,7 +378,7 @@ class MeviraKeep(App):
         self.refresh_notes()
 
     def refresh_notes(self, query=None):
-        if not hasattr(self, 'grid'):
+        if not hasattr(self, "grid"):
             return
         if query is None:
             query = self.search_query
@@ -399,13 +391,17 @@ class MeviraKeep(App):
             note_tag = note.get("tag", "General")
 
             if self.current_view == "trash":
-                if not is_trashed: continue
+                if not is_trashed:
+                    continue
             elif self.current_view == "archive":
-                if is_trashed or not is_archived: continue
+                if is_trashed or not is_archived:
+                    continue
             elif self.current_view == "reminders":
-                if is_trashed or not has_reminder: continue
+                if is_trashed or not has_reminder:
+                    continue
             else:
-                if is_trashed or is_archived: continue
+                if is_trashed or is_archived:
+                    continue
                 if self.selected_tag != "All" and note_tag != self.selected_tag:
                     continue
 
@@ -481,11 +477,8 @@ class MeviraKeep(App):
         tag_input = TextInput(hint_text="Tag / Category (e.g., Work, Personal)", text=existing.get("tag", "General"), multiline=False, size_hint_y=None, height=dp(40))
         content_input = TextInput(hint_text="Write your note here...", text=existing.get("content", ""), multiline=True)
         save_btn = Button(text="Save Note", size_hint_y=None, height=dp(46))
-        
-        layout.add_widget(title_input)
-        layout.add_widget(tag_input)
-        layout.add_widget(content_input)
-        layout.add_widget(save_btn)
+        for widget in (title_input, tag_input, content_input, save_btn):
+            layout.add_widget(widget)
         popup = Popup(title="Edit note" if note else "New text note", content=layout, size_hint=(0.94, 0.85))
 
         def save_note(*_):
@@ -496,11 +489,10 @@ class MeviraKeep(App):
                 self.show_message("Write something first.")
                 return
             if note:
-                note["title"] = title
-                note["tag"] = tag
-                note["content"] = content
-                note["type"] = "text"
-                note["updated"] = datetime.now().isoformat(timespec="minutes")
+                note.update({
+                    "title": title, "tag": tag, "content": content, "type": "text",
+                    "updated": datetime.now().isoformat(timespec="minutes")
+                })
             else:
                 self.notes.append({
                     "id": str(datetime.now().timestamp()), "title": title, "tag": tag,
@@ -518,12 +510,11 @@ class MeviraKeep(App):
     def open_list_editor(self, note=None):
         existing = note or {}
         items = [dict(item) for item in existing.get("items", [])]
-        if not items: items = [{"text": "", "checked": False}]
-
+        if not items:
+            items = [{"text": "", "checked": False}]
         layout = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(8))
         title_input = TextInput(hint_text="Checklist title", text=existing.get("title", ""), multiline=False, size_hint_y=None, height=dp(44))
         tag_input = TextInput(hint_text="Tag (e.g., Work, Personal)", text=existing.get("tag", "General"), multiline=False, size_hint_y=None, height=dp(40))
-        
         rows = BoxLayout(orientation="vertical", spacing=dp(6), size_hint_y=None)
         rows.bind(minimum_height=rows.setter("height"))
 
@@ -544,12 +535,8 @@ class MeviraKeep(App):
         item_scroll.add_widget(rows)
         add_item_btn = Button(text="+ Add item", size_hint_y=None, height=dp(40))
         save_btn = Button(text="Save Checklist", size_hint_y=None, height=dp(46))
-        
-        layout.add_widget(title_input)
-        layout.add_widget(tag_input)
-        layout.add_widget(item_scroll)
-        layout.add_widget(add_item_btn)
-        layout.add_widget(save_btn)
+        for widget in (title_input, tag_input, item_scroll, add_item_btn, save_btn):
+            layout.add_widget(widget)
         popup = Popup(title="Edit checklist" if note else "New checklist", content=layout, size_hint=(0.95, 0.90))
 
         def add_item(*_):
@@ -564,11 +551,10 @@ class MeviraKeep(App):
                 self.show_message("Please add at least one item.")
                 return
             if note:
-                note["title"] = title
-                note["tag"] = tag
-                note["items"] = cleaned_items
-                note["type"] = "list"
-                note["updated"] = datetime.now().isoformat(timespec="minutes")
+                note.update({
+                    "title": title, "tag": tag, "items": cleaned_items, "type": "list",
+                    "updated": datetime.now().isoformat(timespec="minutes")
+                })
             else:
                 self.notes.append({
                     "id": str(datetime.now().timestamp()), "title": title, "tag": tag, "content": "",
@@ -589,33 +575,25 @@ class MeviraKeep(App):
         layout = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(8))
         title_input = TextInput(hint_text="Drawing Title", text=existing.get("title", ""), multiline=False, size_hint_y=None, height=dp(40))
         tag_input = TextInput(hint_text="Tag (e.g., Work, Personal)", text=existing.get("tag", "General"), multiline=False, size_hint_y=None, height=dp(38))
-        
         drawing_pad = DrawingWidget(existing_lines=existing.get("drawing_lines", []))
-        
         btn_box = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
         clear_btn = Button(text="Clear Canvas")
         save_btn = Button(text="Save Drawing")
-        
         clear_btn.bind(on_release=lambda *_: drawing_pad.clear_drawing())
         btn_box.add_widget(clear_btn)
         btn_box.add_widget(save_btn)
-
-        layout.add_widget(title_input)
-        layout.add_widget(tag_input)
-        layout.add_widget(drawing_pad)
-        layout.add_widget(btn_box)
-
+        for widget in (title_input, tag_input, drawing_pad, btn_box):
+            layout.add_widget(widget)
         popup = Popup(title="Drawing Note", content=layout, size_hint=(0.95, 0.90))
 
         def save_drawing_note(*_):
             title = title_input.text.strip() or "Drawing Note"
             tag = tag_input.text.strip() or "General"
             if note:
-                note["title"] = title
-                note["tag"] = tag
-                note["drawing_lines"] = drawing_pad.lines
-                note["type"] = "drawing"
-                note["updated"] = datetime.now().isoformat(timespec="minutes")
+                note.update({
+                    "title": title, "tag": tag, "drawing_lines": drawing_pad.lines, "type": "drawing",
+                    "updated": datetime.now().isoformat(timespec="minutes")
+                })
             else:
                 self.notes.append({
                     "id": str(datetime.now().timestamp()), "title": title, "tag": tag, "content": "",
@@ -637,12 +615,8 @@ class MeviraKeep(App):
         tag_input = TextInput(hint_text="Tag (e.g., Work, Personal)", text=existing.get("tag", "General"), multiline=False, size_hint_y=None, height=dp(40))
         desc_input = TextInput(hint_text="Image description or file path...", text=existing.get("image_text", ""), multiline=True)
         save_btn = Button(text="Save Image Note", size_hint_y=None, height=dp(46))
-
-        layout.add_widget(title_input)
-        layout.add_widget(tag_input)
-        layout.add_widget(desc_input)
-        layout.add_widget(save_btn)
-
+        for widget in (title_input, tag_input, desc_input, save_btn):
+            layout.add_widget(widget)
         popup = Popup(title="Image Note", content=layout, size_hint=(0.90, 0.70))
 
         def save_img_note(*_):
@@ -650,11 +624,10 @@ class MeviraKeep(App):
             tag = tag_input.text.strip() or "General"
             desc = desc_input.text.strip() or "Saved image note"
             if note:
-                note["title"] = title
-                note["tag"] = tag
-                note["image_text"] = desc
-                note["type"] = "image"
-                note["updated"] = datetime.now().isoformat(timespec="minutes")
+                note.update({
+                    "title": title, "tag": tag, "image_text": desc, "type": "image",
+                    "updated": datetime.now().isoformat(timespec="minutes")
+                })
             else:
                 self.notes.append({
                     "id": str(datetime.now().timestamp()), "title": title, "tag": tag, "content": "",
@@ -676,12 +649,8 @@ class MeviraKeep(App):
         tag_input = TextInput(hint_text="Tag (e.g., Work, Personal)", text=existing.get("tag", "General"), multiline=False, size_hint_y=None, height=dp(40))
         desc_input = TextInput(hint_text="Voice note details or reminder...", text=existing.get("audio_text", "Voice memo recorded"), multiline=True)
         save_btn = Button(text="Save Audio Note", size_hint_y=None, height=dp(46))
-
-        layout.add_widget(title_input)
-        layout.add_widget(tag_input)
-        layout.add_widget(desc_input)
-        layout.add_widget(save_btn)
-
+        for widget in (title_input, tag_input, desc_input, save_btn):
+            layout.add_widget(widget)
         popup = Popup(title="Audio Note", content=layout, size_hint=(0.90, 0.70))
 
         def save_audio_note(*_):
@@ -689,11 +658,10 @@ class MeviraKeep(App):
             tag = tag_input.text.strip() or "General"
             desc = desc_input.text.strip() or "Voice memo recorded"
             if note:
-                note["title"] = title
-                note["tag"] = tag
-                note["audio_text"] = desc
-                note["type"] = "audio"
-                note["updated"] = datetime.now().isoformat(timespec="minutes")
+                note.update({
+                    "title": title, "tag": tag, "audio_text": desc, "type": "audio",
+                    "updated": datetime.now().isoformat(timespec="minutes")
+                })
             else:
                 self.notes.append({
                     "id": str(datetime.now().timestamp()), "title": title, "tag": tag, "content": "",
@@ -710,8 +678,14 @@ class MeviraKeep(App):
 
     def export_note(self, note):
         try:
-            filename = Path.home() / f"Note_{note.get('title', 'export').replace(' ', '_')}.txt"
-            content_to_write = f"Title: {note.get('title')}\nTag: {note.get('tag')}\nCreated: {note.get('created')}\n\nContent:\n{note.get('content') or note.get('image_text') or note.get('audio_text') or 'Checklist/Drawing Note'}"
+            export_dir = Path(self.user_data_dir)
+            safe_title = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in note.get("title", "export"))
+            filename = export_dir / f"Note_{safe_title}.txt"
+            content_to_write = (
+                f"Title: {note.get('title')}\nTag: {note.get('tag')}\n"
+                f"Created: {note.get('created')}\n\nContent:\n"
+                f"{note.get('content') or note.get('image_text') or note.get('audio_text') or 'Checklist/Drawing Note'}"
+            )
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(content_to_write)
             self.show_message(f"📤 Note exported successfully!\nSaved to:\n{filename}")
@@ -739,7 +713,8 @@ class MeviraKeep(App):
 
     def toggle_archive(self, note):
         note["archived"] = not note.get("archived", False)
-        if note["archived"]: note["pinned"] = False
+        if note["archived"]:
+            note["pinned"] = False
         self.save_notes()
         self.refresh_notes()
 
@@ -755,7 +730,8 @@ class MeviraKeep(App):
         self.refresh_notes()
 
     def delete_forever(self, note):
-        if note in self.notes: self.notes.remove(note)
+        if note in self.notes:
+            self.notes.remove(note)
         self.save_notes()
         self.refresh_notes()
 
@@ -768,13 +744,13 @@ class MeviraKeep(App):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
         triggered = False
         for note in self.notes:
-            if note.get("trashed"): continue
+            if note.get("trashed"):
+                continue
             rem = note.get("reminder", "")
-            if rem and not note.get("reminder_fired", False):
-                if now_str >= rem:
-                    note["reminder_fired"] = True
-                    triggered = True
-                    self.show_message(f"🔔 Reminder: {note.get('title', 'Untitled')}")
+            if rem and not note.get("reminder_fired", False) and now_str >= rem:
+                note["reminder_fired"] = True
+                triggered = True
+                self.show_message(f"🔔 Reminder: {note.get('title', 'Untitled')}")
         if triggered:
             self.save_notes()
             self.refresh_notes()
@@ -782,14 +758,11 @@ class MeviraKeep(App):
     def open_calendar_view(self):
         layout = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(8))
         popup = Popup(title="🗓️ Notes Calendar View", content=layout, size_hint=(0.90, 0.80))
-
         scroll = ScrollView()
         grid = GridLayout(cols=1, spacing=dp(8), size_hint_y=None)
         grid.bind(minimum_height=grid.setter("height"))
-
         active_notes = [n for n in self.notes if not n.get("trashed")]
         active_notes.sort(key=lambda x: x.get("created", ""), reverse=True)
-
         if not active_notes:
             grid.add_widget(Label(text="No notes available.", size_hint_y=None, height=dp(40)))
         else:
@@ -801,7 +774,6 @@ class MeviraKeep(App):
                 )
                 btn.bind(size=lambda obj, size: setattr(obj, "text_size", (size[0] - dp(20), None)))
                 grid.add_widget(btn)
-
         scroll.add_widget(grid)
         layout.add_widget(scroll)
         popup.open()
@@ -809,8 +781,11 @@ class MeviraKeep(App):
     def open_menu(self, *_):
         layout = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(8))
         popup = Popup(title="Mevira Keep Menu", content=layout, size_hint=(0.85, 0.80))
-
-        for label, view_key in [("📝 All Notes", "notes"), ("🔔 Reminders", "reminders"), ("📌 Archive", "archive"), ("🗑️ Trash", "trash"), ("🗓️ Calendar View", "calendar")]:
+        for label, view_key in [
+            ("📝 All Notes", "notes"), ("🔔 Reminders", "reminders"),
+            ("📌 Archive", "archive"), ("🗑️ Trash", "trash"),
+            ("🗓️ Calendar View", "calendar")
+        ]:
             btn = Button(text=label, size_hint_y=None, height=dp(40))
             if view_key == "calendar":
                 btn.bind(on_release=lambda *_: (popup.dismiss(), self.open_calendar_view()))
@@ -820,11 +795,10 @@ class MeviraKeep(App):
 
         unique_tags = sorted(list(set(n.get("tag", "General") for n in self.notes if not n.get("trashed"))))
         if unique_tags:
-            tag_header = Button(text="--- Tags ---", size_hint_y=None, height=dp(25), disabled=True)
-            layout.add_widget(tag_header)
-            for t in unique_tags:
-                t_btn = Button(text=f"🏷️ #{t}", size_hint_y=None, height=dp(38))
-                t_btn.bind(on_release=lambda _, tag_name=t: (popup.dismiss(), self.switch_view("notes", tag_name)))
+            layout.add_widget(Button(text="--- Tags ---", size_hint_y=None, height=dp(25), disabled=True))
+            for tag_name in unique_tags:
+                t_btn = Button(text=f"🏷️ #{tag_name}", size_hint_y=None, height=dp(38))
+                t_btn.bind(on_release=lambda _, t=tag_name: (popup.dismiss(), self.switch_view("notes", t)))
                 layout.add_widget(t_btn)
 
         settings_btn = Button(text="⚙️ Statistics & Settings", size_hint_y=None, height=dp(40))
@@ -835,17 +809,14 @@ class MeviraKeep(App):
     def open_settings(self):
         layout = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(10))
         popup = Popup(title="App Statistics & Settings", content=layout, size_hint=(0.88, 0.70))
-
         total_notes = len([n for n in self.notes if not n.get("trashed")])
         trashed_notes = len([n for n in self.notes if n.get("trashed")])
         archived_notes = len([n for n in self.notes if n.get("archived") and not n.get("trashed")])
-
         stats_text = f"📊 Total Active Notes: {total_notes}\n📌 Archived Notes: {archived_notes}\n🗑️ Trash Notes: {trashed_notes}"
         stats_lbl = Label(text=stats_text, font_size="14sp", size_hint_y=None, height=dp(60), halign="left", valign="middle")
         stats_lbl.bind(size=lambda obj, size: setattr(obj, "text_size", (size[0], None)))
 
-        font_label = f"Font Size: {self.font_size_pref}"
-        font_btn = Button(text=font_label, size_hint_y=None, height=dp(44))
+        font_btn = Button(text=f"Font Size: {self.font_size_pref}", size_hint_y=None, height=dp(44))
         def toggle_font(*_):
             self.font_size_pref = "Large" if self.font_size_pref == "Normal" else "Normal"
             font_btn.text = f"Font Size: {self.font_size_pref}"
@@ -856,20 +827,18 @@ class MeviraKeep(App):
         theme_label = "Switch to Light Mode ☀️" if self.dark_mode else "Switch to Dark Mode 🌙"
         theme_btn = Button(text=theme_label, size_hint_y=None, height=dp(44))
         theme_btn.bind(on_release=lambda *_: (self.toggle_dark_mode(), popup.dismiss()))
-
-        empty_btn = Button(text="🗑️ Empty Trash Now", size_hint_y=None, height=dp(44), background_normal="", background_color=(0.85, 0.25, 0.25, 1), color=(1,1,1,1))
+        empty_btn = Button(
+            text="🗑️ Empty Trash Now", size_hint_y=None, height=dp(44),
+            background_normal="", background_color=(0.85, 0.25, 0.25, 1), color=(1, 1, 1, 1)
+        )
         empty_btn.bind(on_release=lambda *_: (self.empty_trash(), popup.dismiss()))
-
-        layout.add_widget(stats_lbl)
-        layout.add_widget(font_btn)
-        layout.add_widget(theme_btn)
-        layout.add_widget(empty_btn)
+        for widget in (stats_lbl, font_btn, theme_btn, empty_btn):
+            layout.add_widget(widget)
         popup.open()
 
     def show_message(self, message):
         popup = Popup(title="Mevira Keep", content=Label(text=message), size_hint=(0.85, 0.35))
         popup.open()
-
 
 if __name__ == "__main__":
     MeviraKeep().run()
